@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import inngest
@@ -48,6 +49,12 @@ async def make_report(ctx: inngest.Context) -> dict[str, str]:
             "topic": topic,
             "summary": f"Report about {topic}",
         }
+        outbox = Path("outbox")
+        outbox.mkdir(exist_ok=True)
+        (outbox / f"{report_id}.txt").write_text(
+            f"Report about {topic}\n{result['summary']}\n",
+            encoding="utf-8",
+        )
         reports[report_id].update(status="done", result=result)
         return result
 
@@ -97,6 +104,11 @@ async def create_report(request: ReportRequest) -> dict[str, str]:
         )
     )
     return {"id": report_id, "status": "pending"}
+
+
+@app.get("/reports")
+def list_reports() -> list[dict[str, object]]:
+    return list(reports.values())
 
 
 @app.get("/reports/{report_id}")

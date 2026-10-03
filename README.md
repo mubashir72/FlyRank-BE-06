@@ -30,10 +30,11 @@ Open the Inngest dashboard at <http://localhost:8288>. If port 8288 is already o
 |---|---|---|
 | `GET` | `/health` | Returns `{"status":"ok"}`. |
 | `POST` | `/reports` | Accepts `{"topic":"cats"}`, queues a report, and immediately returns HTTP 202 with its ID and `pending` status. A missing topic returns HTTP 400 without queuing a job. |
+| `GET` | `/reports` | Lists all in-memory reports and their current statuses. |
 | `GET` | `/reports/{id}` | Returns the saved report (`pending` while processing, then `done` with its result); unknown IDs return HTTP 404. |
 | `GET`, `POST`, `PUT` | `/api/inngest` | Inngest function discovery and execution endpoint. |
 
-Reports are kept in memory, so they are cleared when the API process restarts.
+Reports are kept in memory, so they are cleared when the API process restarts. Each successful report also writes a plain-text copy to `outbox/{id}.txt`, a local stand-in for a background email.
 
 ## Inngest functions
 
