@@ -17,7 +17,7 @@ inngest_client = inngest.Inngest(
 
 
 class ReportRequest(BaseModel):
-    topic: str
+    topic: str | None = None
 
 
 @inngest_client.create_function(
@@ -32,6 +32,7 @@ async def say_hello(ctx: inngest.Context) -> str:
 @inngest_client.create_function(
     fn_id="make-report",
     trigger=inngest.TriggerEvent(event="report/requested"),
+    retries=2,
 )
 async def make_report(ctx: inngest.Context) -> dict[str, str]:
     report_id = ctx.event.data["id"]
@@ -40,6 +41,9 @@ async def make_report(ctx: inngest.Context) -> dict[str, str]:
     await ctx.step.sleep("do-the-slow-work", timedelta(seconds=8))
 
     async def build_report() -> dict[str, str]:
+        if topic == "fail":
+            raise RuntimeError("The report oven is broken!")
+
         result = {
             "topic": topic,
             "summary": f"Report about {topic}",
@@ -57,6 +61,12 @@ inngest.fast_api.serve(app, inngest_client, [say_hello, make_report])
 
 @app.post("/reports", status_code=status.HTTP_202_ACCEPTED)
 async def create_report(request: ReportRequest) -> dict[str, str]:
+    if request.topic is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Topic is required",
+        )
+
     report_id = str(uuid4())
     reports[report_id] = {
         "id": report_id,
